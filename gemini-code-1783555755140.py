@@ -41,18 +41,14 @@ if uploaded_file is not None:
 if dados_finais is None:
     dados_finais = weibull_min.rvs(k, scale=c, size=1000)
 
-# --- GRÁFICOS COM VISUAL CLEAN ---
+# --- GRÁFICOS CLEAN ---
 col1, col2 = st.columns(2)
 
 with col1:
     fig = go.Figure()
-    fig.add_trace(go.Histogram(x=dados_finais, histnorm='probability density', 
-                               marker_color='#5DADE2', opacity=0.7))
-    fig.update_layout(title="Distribuição das Velocidades", 
-                      xaxis_title="Velocidade (m/s)", yaxis_title="Densidade",
-                      plot_bgcolor='white', template='plotly_white')
+    fig.add_trace(go.Histogram(x=dados_finais, histnorm='probability density', marker_color='#5DADE2', opacity=0.7))
+    fig.update_layout(title="Distribuição das Velocidades", xaxis_title="Velocidade (m/s)", yaxis_title="Densidade", plot_bgcolor='white', template='plotly_white')
     fig.update_xaxes(showgrid=True, gridcolor='#f0f0f0')
-    fig.update_yaxes(showgrid=True, gridcolor='#f0f0f0')
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
@@ -60,20 +56,21 @@ with col2:
     pdf = (k / c) * (v_teorico / c)**(k - 1) * np.exp(-(v_teorico / c)**k)
     fig_weibull = go.Figure()
     fig_weibull.add_trace(go.Scatter(x=v_teorico, y=pdf, line=dict(color='#E74C3C', width=3)))
-    fig_weibull.update_layout(title="Curva Teórica de Weibull", 
-                              xaxis_title="Velocidade (m/s)", yaxis_title="f(v)",
-                              plot_bgcolor='white', template='plotly_white')
-    fig_weibull.update_xaxes(showgrid=True, gridcolor='#f0f0f0')
-    fig_weibull.update_yaxes(showgrid=True, gridcolor='#f0f0f0')
+    fig_weibull.update_layout(title="Curva Teórica de Weibull", xaxis_title="Velocidade (m/s)", yaxis_title="f(v)", plot_bgcolor='white', template='plotly_white')
+    fig.update_xaxes(showgrid=True, gridcolor='#f0f0f0')
     st.plotly_chart(fig_weibull, use_container_width=True)
 
-# --- RESULTADOS ---
-st.header("Cálculos Estatísticos e Potência")
+# --- RESULTADOS ESTILO "CARD" ---
+st.markdown("---")
+st.subheader("Resultados Calculados")
+
 v_media_teorica = c * gamma(1 + 1/k)
 potencia_media = 0.5 * rho * area_varredura * (c**3) * gamma(1 + 3/k)
 
-col_a, col_b, col_c, col_d = st.columns(4)
-col_a.metric("Velocidade Média", f"{v_media_teorica:.2f} m/s")
-col_b.metric("Potência Disponível", f"{potencia_media/1000:.2f} kW")
-col_c.metric("Potência Gerada", f"{(potencia_media * cp)/1000:.2f} kW")
-col_d.metric("Área de Varredura", f"{area_varredura:.1f} m²")
+# Criando as 4 colunas para o layout limpo
+c1, c2, c3, c4 = st.columns(4)
+
+c1.metric("Velocidade Média", f"{v_media_teorica:.2f} m/s")
+c2.metric("Potência Disponível", f"{potencia_media/1000:.2f} kW")
+c3.metric("Potência Gerada", f"{(potencia_media * cp)/1000:.2f} kW")
+c4.metric("Área de Varredura", f"{area_varredura:.1f} m²")
