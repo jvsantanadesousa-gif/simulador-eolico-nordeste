@@ -21,7 +21,7 @@ cp = st.sidebar.number_input("Coeficiente de Potência (Cp)", min_value=0.01, ma
 area_varredura = np.pi * (raio_rotor ** 2)
 
 # Gerar dados teóricos baseados nos parâmetros manuais
-dados_finais = weibull_min.rvs(k, scale=c, size=5000)
+dados_simulados = weibull_min.rvs(k, scale=c, size=5000)
 v_teorico = np.linspace(0, 25, 200)
 pdf = (k / c) * (v_teorico / c)**(k - 1) * np.exp(-(v_teorico / c)**k)
 cdf = 1 - np.exp(-(v_teorico / c)**k)
@@ -31,7 +31,7 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     fig_hist = go.Figure()
-    fig_hist.add_trace(go.Histogram(x=dados_finais, histnorm='probability density', marker_color='#5DADE2', opacity=0.7))
+    fig_hist.add_trace(go.Histogram(x=dados_simulados, histnorm='probability density', marker_color='#5DADE2', opacity=0.7))
     fig_hist.update_layout(title="Distribuição (Histograma)", xaxis_title="Velocidade (m/s)", yaxis_title="Densidade", plot_bgcolor='white', template='plotly_white')
     st.plotly_chart(fig_hist, use_container_width=True)
 
