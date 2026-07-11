@@ -13,18 +13,15 @@ st.markdown("---")
 # --- BARRA LATERAL: ENTRADA MANUAL ---
 st.sidebar.header("Parâmetros de Entrada")
 k = st.sidebar.number_input("Parâmetro de Forma (k)", min_value=0.1, value=2.5, step=0.1, format="%.2f")
-
-# O usuário define a velocidade média, o 'c' é calculado em função dela
-v_media_desejada = st.sidebar.number_input("Velocidade Média Desejada [m/s]", min_value=1.0, value=8.5, step=0.1)
-
-# Cálculo do parâmetro de escala 'c' baseado na média desejada: c = v_media / gamma(1 + 1/k)
-c = v_media_desejada / gamma(1 + 1/k)
-
+c = st.sidebar.number_input("Parâmetro de Escala (c) [m/s]", min_value=0.1, value=8.5, step=0.1, format="%.2f")
 rho = st.sidebar.number_input("Densidade do ar (ρ) [kg/m³]", value=1.225, format="%.3f")
 raio_rotor = st.sidebar.number_input("Raio do rotor da turbina [m]", value=40.0, step=0.1)
 cp = st.sidebar.number_input("Coeficiente de Potência (Cp)", min_value=0.01, max_value=0.59, value=0.40, step=0.01)
 
 area_varredura = np.pi * (raio_rotor ** 2)
+
+# Cálculo automático da velocidade média baseado nos parâmetros inseridos
+v_media_calculada = c * gamma(1 + 1/k)
 
 # Gerar dados teóricos
 dados_simulados = weibull_min.rvs(k, scale=c, size=5000)
@@ -42,10 +39,10 @@ with col1:
     st.plotly_chart(fig_hist, use_container_width=True)
 
 with col2:
-    fig_weibull = go.Figure()
-    fig_weibull.add_trace(go.Scatter(x=v_teorico, y=pdf, line=dict(color='#E74C3C', width=3)))
-    fig_weibull.update_layout(title="Função Densidade (PDF)", xaxis_title="Velocidade (m/s)", yaxis_title="f(v)", plot_bgcolor='white', template='plotly_white')
-    st.plotly_chart(fig_weibull, use_container_width=True)
+    fig_pdf = go.Figure()
+    fig_pdf.add_trace(go.Scatter(x=v_teorico, y=pdf, line=dict(color='#E74C3C', width=3)))
+    fig_pdf.update_layout(title="Função Densidade (PDF)", xaxis_title="Velocidade (m/s)", yaxis_title="f(v)", plot_bgcolor='white', template='plotly_white')
+    st.plotly_chart(fig_pdf, use_container_width=True)
 
 with col3:
     fig_cdf = go.Figure()
@@ -57,11 +54,10 @@ with col3:
 st.markdown("---")
 st.subheader("Resultados Calculados")
 
-# Cálculo da potência usando o 'c' derivado da velocidade média do usuário
 potencia_media = 0.5 * rho * area_varredura * (c**3) * gamma(1 + 3/k)
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Velocidade Média Alvo", f"{v_media_desejada:.2f} m/s")
+c1.metric("Velocidade Média", f"{v_media_calculada:.2f} m/s")
 c2.metric("Potência Disponível", f"{potencia_media/1000:.2f} kW")
 c3.metric("Potência Gerada", f"{(potencia_media * cp)/1000:.2f} kW")
 c4.metric("Área de Varredura", f"{area_varredura:.1f} m²")
