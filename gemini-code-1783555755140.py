@@ -28,24 +28,19 @@ dados_finais = None
 
 if uploaded_file is not None:
     try:
-        # skiprows=8 ignora o cabeçalho técnico do INMET
         df = pd.read_csv(uploaded_file, encoding='latin1', sep=';', skiprows=8, engine='python')
         col_nome = "VENTO, VELOCIDADE HORARIA (m/s)"
         
         if col_nome in df.columns:
-            # Converte para numérico e remove valores vazios
             dados = pd.to_numeric(df[col_nome].astype(str).str.replace(',', '.'), errors='coerce').dropna()
             if len(dados) > 0:
                 dados_finais = dados.values
                 st.success(f"Dados reais carregados com sucesso ({len(dados_finais)} registros).")
             else:
                 st.warning("O arquivo foi carregado, mas a coluna de velocidade está vazia.")
-        else:
-            st.error(f"Coluna de velocidade não encontrada. Colunas disponíveis: {df.columns.tolist()}")
     except Exception as e:
         st.error(f"Erro na leitura do arquivo: {e}")
 
-# Modo de Simulação se não houver dados reais
 if dados_finais is None:
     st.info("Modo de Simulação: Utilizando distribuição teórica de Weibull.")
     dados_finais = weibull_min.rvs(k, scale=c, size=1000)
@@ -53,38 +48,39 @@ if dados_finais is None:
 # --- GRÁFICOS ---
 col1, col2 = st.columns(2)
 
+# PDF e Histograma
 with col1:
-    fig = go.Figure()
-    fig.add_trace(go.Histogram(x=dados_finais, histnorm='probability density', 
-                               marker_color='#5DADE2', opacity=0.7))
-    fig.update_layout(title="Distribuição das Velocidades", 
-                      xaxis_title="Velocidade (m/s)", yaxis_title="Densidade",
-                      plot_bgcolor='white', template='plotly_white')
-    fig.update_xaxes(showgrid=True, gridcolor='#f0f0f0')
-    st.plotly_chart(fig, use_container_width=True)
+    fig_hist = go.Figure()
+    fig_hist.add_trace(go.Histogram(x=dados_finais, histnorm='probability density', name='Dados', marker_color='#1f77b4'))
+    fig_hist.update_layout(title="Distribuição das Velocidades (Histograma)", xaxis_title="Velocidade (m/s)", yaxis_title="Densidade")
+    st.plotly_chart(fig_hist, use_container_width=True)
 
 with col2:
     v_teorico = np.linspace(0, 25, 200)
     pdf = (k / c) * (v_teorico / c)**(k - 1) * np.exp(-(v_teorico / c)**k)
     fig_weibull = go.Figure()
-    fig_weibull.add_trace(go.Scatter(x=v_teorico, y=pdf, line=dict(color='#E74C3C', width=3)))
-    fig_weibull.update_layout(title="Curva Teórica de Weibull", 
-                              xaxis_title="Velocidade (m/s)", yaxis_title="f(v)",
-                              plot_bgcolor='white', template='plotly_white')
-    fig_weibull.update_xaxes(showgrid=True, gridcolor='#f0f0f0')
+    fig_weibull.add_trace(go.Scatter(x=v_teorico, y=pdf, name='PDF', line=dict(color='red', width=3)))
+    fig_weibull.update_layout(title="Função Densidade de Probabilidade (PDF)", xaxis_title="Velocidade (m/s)", yaxis_title="f(v)")
     st.plotly_chart(fig_weibull, use_container_width=True)
+
+# --- TERCEIRO GRÁFICO: FDA (CDF) ---
+st.subheader("Função de Distribuição Acumulada (FDA)")
+cdf = 1 - np.exp(-(v_teorico / c)**k)
+
+fig_cdf = go.Figure()
+fig_cdf.add_trace(go.Scatter(x=v_teorico, y=cdf, name='FDA', line=dict(color='green', width=3)))
+fig_cdf.update_layout(xaxis_title="Velocidade (m/s)", yaxis_title="F(v)", template="plotly_white")
+st.plotly_chart(fig_cdf, use_container_width=True)
 
 # --- RESULTADOS E VELOCIDADE MÉDIA ---
 st.markdown("---")
-st.subheader("Resultados Calculados")
+st.header("Cálculos Estatísticos e Potência")
 
-# Cálculo da velocidade média teórica e potências
 v_media_teorica = c * gamma(1 + 1/k)
 potencia_media = 0.5 * rho * area_varredura * (c**3) * gamma(1 + 3/k)
 
-# Layout limpo conforme solicitado
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Velocidade Média", f"{v_media_teorica:.2f} m/s")
-c2.metric("Potência Disponível", f"{potencia_media/1000:.2f} kW")
-c3.metric("Potência Gerada", f"{(potencia_media * cp)/1000:.2f} kW")
-c4.metric("Área de Varredura", f"{area_varredura:.1f} m²")
+col_a, col_b, col_c, col_d = st.columns(4)
+col_a.metric("Velocidade Média (Teórica)", f"{v_media_teorica:.2f} m/s")
+col_b.metric("Potência Disponível", f"{potencia_media/1000:.2f} kW")
+col_c.metric("Potência Gerada", f"{(potencia_media * cp)/1000:.2f} kW")
+col_d.metric("Área de Varredura", f"{area_varredura:.1f} m²")
