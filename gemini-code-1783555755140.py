@@ -7,7 +7,7 @@ from scipy.stats import weibull_min
 # Configuração da página
 st.set_page_config(page_title="Dashboard de Potencial Eólico", layout="wide")
 
-st.title("Simulador de Potencial Eólico - Tarefa 3.1")
+st.title("Simulador de Potencial Eólico")
 st.markdown("---")
 
 # --- BARRA LATERAL: ENTRADA MANUAL ---
