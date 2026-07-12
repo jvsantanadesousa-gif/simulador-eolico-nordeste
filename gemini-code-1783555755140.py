@@ -44,7 +44,8 @@ if arquivo_carregado is not None:
         if arquivo_carregado.name.endswith('.xlsx'):
             df = pd.read_excel(arquivo_carregado)
         else:
-            df = pd.read_csv(arquivo_carregado)
+            # Correção implementada: sep=None e engine='python' detectam automaticamente se usa ; ou ,
+            df = pd.read_csv(arquivo_carregado, sep=None, engine='python')
         
         coluna_velocidade = st.sidebar.selectbox("Selecione a coluna de velocidade do vento", df.columns)
         dados_reais = df[coluna_velocidade].dropna().values
@@ -73,7 +74,6 @@ with col1:
     if dados_reais is not None:
         fig_hist.add_trace(go.Histogram(x=dados_reais, histnorm='probability density', name='Dados Reais', marker_color='#5DADE2', opacity=0.7))
     else:
-        # Se não houver arquivo, simula com base nos parâmetros manuais
         dados_simulados = weibull_min.rvs(k_manual, scale=c_manual, size=5000)
         fig_hist.add_trace(go.Histogram(x=dados_simulados, histnorm='probability density', name='Simulado (Manual)', marker_color='#5DADE2', opacity=0.7))
     fig_hist.update_layout(title="Distribuição (Histograma)", xaxis_title="Velocidade (m/s)", yaxis_title="Densidade", plot_bgcolor='white', template='plotly_white', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
@@ -99,7 +99,6 @@ with col3:
 st.markdown("---")
 st.subheader("Resultados Calculados")
 
-# Cálculo baseado nos parâmetros manuais inseridos na lateral
 v_media_manual = c_manual * gamma(1 + 1/k_manual)
 potencia_media_manual = 0.5 * rho * area_varredura * (c_manual**3) * gamma(1 + 3/k_manual)
 
@@ -117,7 +116,6 @@ if dados_reais is not None:
     v_media_real = np.mean(dados_reais)
     potencia_media_real = 0.5 * rho * area_varredura * (c_auto**3) * gamma(1 + 3/k_auto)
     
-    # Cartões informativos com os valores automáticos gerados pelo Excel
     ca1, ca2, ca3, ca4 = st.columns(4)
     ca1.metric("Parâmetro de Forma (k)", f"{k_auto:.2f}")
     ca2.metric("Parâmetro de Escala (c)", f"{c_auto:.2f} m/s")
