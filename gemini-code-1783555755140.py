@@ -44,31 +44,33 @@ if arquivo_carregado is not None:
         if arquivo_carregado.name.endswith('.xlsx'):
             df = pd.read_excel(arquivo_carregado)
         else:
-            df = pd.read_csv(arquivo_carregado, sep=None, engine='python')
+            df = pd.read_csv(arquivo_carregado, sep=None, engine='python', encoding='utf-8')
         
-        coluna_velocidade = st.sidebar.selectbox("Selecione a coluna de velocidade do vento", df.columns)
-        dados_reais = df[coluna_velocidade].dropna().values
-        
-        # Ajuste automático de Weibull nos dados reais
-        k_auto, loc, c_auto = weibull_min.fit(dados_reais, floc=0)
-        
-        # CORREÇÃO AQUI: Garante que k_auto e c_auto sejam válidos antes de prosseguir
-        if k_auto > 0 and c_auto > 0:
-            # Correção da determinação do limite máximo do gráfico de forma segura
-            max_velocidade_dados = float(np.max(dados_reais))
-            limite_superior_grafico = max(max_velocidade_dados + 5.0, 25.0)
+        # Correção: Garante que o DataFrame possui colunas antes de renderizar o selectbox
+        if len(df.columns) > 0:
+            coluna_velocidade = st.sidebar.selectbox("Selecione a coluna de velocidade do vento", options=list(df.columns))
+            dados_reais = df[coluna_velocidade].dropna().values
             
-            v_teorico = np.linspace(0.01, limite_superior_grafico, 200)
+            # Ajuste automático de Weibull nos dados reais
+            k_auto, loc, c_auto = weibull_min.fit(dados_reais, floc=0)
             
-            # Recalcula curvas teóricas manuais e adiciona as automáticas
-            pdf_manual = (k_manual / c_manual) * (v_teorico / c_manual)**(k_manual - 1) * np.exp(-(v_teorico / c_manual)**k_manual)
-            cdf_manual = 1 - np.exp(-(v_teorico / c_manual)**k_manual)
-            
-            pdf_auto = (k_auto / c_auto) * (v_teorico / c_auto)**(k_auto - 1) * np.exp(-(v_teorico / c_auto)**k_auto)
-            cdf_auto = 1 - np.exp(-(v_teorico / c_auto)**k_auto)
+            if k_auto > 0 and c_auto > 0:
+                max_velocidade_dados = float(np.max(dados_reais))
+                limite_superior_grafico = max(max_velocidade_dados + 5.0, 25.0)
+                
+                v_teorico = np.linspace(0.01, limite_superior_grafico, 200)
+                
+                # Recalcula curvas teóricas manuais e adiciona as automáticas
+                pdf_manual = (k_manual / c_manual) * (v_teorico / c_manual)**(k_manual - 1) * np.exp(-(v_teorico / c_manual)**k_manual)
+                cdf_manual = 1 - np.exp(-(v_teorico / c_manual)**k_manual)
+                
+                pdf_auto = (k_auto / c_auto) * (v_teorico / c_auto)**(k_auto - 1) * np.exp(-(v_teorico / c_auto)**k_auto)
+                cdf_auto = 1 - np.exp(-(v_teorico / c_auto)**k_auto)
+            else:
+                st.error("Não foi possível ajustar os parâmetros de Weibull para os dados fornecidos.")
+                dados_reais = None
         else:
-            st.error("Não foi possível ajustar os parâmetros de Weibull para os dados fornecidos.")
-            dados_reais = None
+            st.error("O arquivo carregado não contém colunas válidas.")
         
     except Exception as e:
         st.error(f"Erro ao ler arquivo: {e}")
