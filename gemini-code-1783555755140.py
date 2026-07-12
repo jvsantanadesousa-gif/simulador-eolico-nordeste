@@ -46,23 +46,46 @@ if arquivo_carregado is not None:
         else:
             df = pd.read_csv(arquivo_carregado, sep=None, engine='python', encoding='utf-8')
         
-        # Garante que o DataFrame possui colunas
+        # Limpeza essencial: Remove espaços invisíveis nas bordas dos nomes das colunas
+        df.columns = df.columns.str.strip()
+        
         if len(df.columns) > 0:
-            # CORREÇÃO DEFINITIVA: Se tiver apenas 1 coluna, seleciona automaticamente. Se tiver mais, mostra o selectbox.
-            if len(df.columns) == 1:
-                coluna_velocidade = df.columns[0]
-                st.sidebar.info(f"Coluna detectada: {coluna_velocidade}")
+            coluna_selecionada = None
+            
+            # 1. Tenta correspondência exata
+            if "Vel. Vento (m/s)" in df.columns:
+                coluna_selecionada = "Vel. Vento (m/s)"
             else:
-                coluna_velocidade = st.sidebar.selectbox("Selecione a coluna de velocidade do vento", options=list(df.columns))
+                # 2. Busca inteligente por termos parciais caso haja variação de digitação
+                for col in df.columns:
+                    if "vel" in col.lower() or "vento" in col.lower() or "m/s" in col.lower():
+                        coluna_selecionada = col
+                        break
+                
+                # 3. Fallback: Se não achar nada, pega a primeira coluna disponível
+                if coluna_selecionada is None:
+                    coluna_selecionada = df.columns[0]
+            
+            st.sidebar.success(f"Coluna identificada: '{coluna_selecionada}'")
+            
+            # Se houver mais colunas, permite alternar por segurança
+            if len(df.columns) > 1:
+                coluna_velocidade = st.sidebar.selectbox(
+                    "Selecione a coluna de velocidade do vento", 
+                    options=list(df.columns),
+                    index=list(df.columns).index(coluna_selecionada)
+                )
+            else:
+                coluna_velocidade = coluna_selecionada
                 
             dados_reais = df[coluna_velocidade].dropna().values
             
-            # Converter os dados para tipo float e remover valores menores ou iguais a zero (essencial para Weibull)
+            # Garante dados numéricos e limpa valores inconsistentes (<= 0) para o ajuste de Weibull
             dados_reais = np.array(dados_reais, dtype=float)
             dados_reais = dados_reais[dados_reais > 0]
             
             if len(dados_reais) > 0:
-                # Ajuste automático de Weibull nos dados reais
+                # Ajuste automático da curva
                 k_auto, loc, c_auto = weibull_min.fit(dados_reais, floc=0)
                 
                 if k_auto > 0 and c_auto > 0:
@@ -71,7 +94,6 @@ if arquivo_carregado is not None:
                     
                     v_teorico = np.linspace(0.01, limite_superior_grafico, 200)
                     
-                    # Recalcula curvas teóricas manuais e adiciona as automáticas
                     pdf_manual = (k_manual / c_manual) * (v_teorico / c_manual)**(k_manual - 1) * np.exp(-(v_teorico / c_manual)**k_manual)
                     cdf_manual = 1 - np.exp(-(v_teorico / c_manual)**k_manual)
                     
