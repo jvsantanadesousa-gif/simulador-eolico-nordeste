@@ -44,7 +44,6 @@ if arquivo_carregado is not None:
         if arquivo_carregado.name.endswith('.xlsx'):
             df = pd.read_excel(arquivo_carregado)
         else:
-            # Correção implementada: sep=None e engine='python' detectam automaticamente se usa ; ou ,
             df = pd.read_csv(arquivo_carregado, sep=None, engine='python')
         
         coluna_velocidade = st.sidebar.selectbox("Selecione a coluna de velocidade do vento", df.columns)
@@ -53,18 +52,27 @@ if arquivo_carregado is not None:
         # Ajuste automático de Weibull nos dados reais
         k_auto, loc, c_auto = weibull_min.fit(dados_reais, floc=0)
         
-        # Amplia o vetor teórico para cobrir velocidades maiores detectadas se necessário
-        v_teorico = np.linspace(0, max(max(dados_reais) + 5, 25), 200)
-        
-        # Recalcula curvas teóricas manuais e adiciona as automáticas
-        pdf_manual = (k_manual / c_manual) * (v_teorico / c_manual)**(k_manual - 1) * np.exp(-(v_teorico / c_manual)**k_manual)
-        cdf_manual = 1 - np.exp(-(v_teorico / c_manual)**k_manual)
-        
-        pdf_auto = (k_auto / c_auto) * (v_teorico / c_auto)**(k_auto - 1) * np.exp(-(v_teorico / c_auto)**k_auto)
-        cdf_auto = 1 - np.exp(-(v_teorico / c_auto)**k_auto)
+        # CORREÇÃO AQUI: Garante que k_auto e c_auto sejam válidos antes de prosseguir
+        if k_auto > 0 and c_auto > 0:
+            # Correção da determinação do limite máximo do gráfico de forma segura
+            max_velocidade_dados = float(np.max(dados_reais))
+            limite_superior_grafico = max(max_velocidade_dados + 5.0, 25.0)
+            
+            v_teorico = np.linspace(0.01, limite_superior_grafico, 200)
+            
+            # Recalcula curvas teóricas manuais e adiciona as automáticas
+            pdf_manual = (k_manual / c_manual) * (v_teorico / c_manual)**(k_manual - 1) * np.exp(-(v_teorico / c_manual)**k_manual)
+            cdf_manual = 1 - np.exp(-(v_teorico / c_manual)**k_manual)
+            
+            pdf_auto = (k_auto / c_auto) * (v_teorico / c_auto)**(k_auto - 1) * np.exp(-(v_teorico / c_auto)**k_auto)
+            cdf_auto = 1 - np.exp(-(v_teorico / c_auto)**k_auto)
+        else:
+            st.error("Não foi possível ajustar os parâmetros de Weibull para os dados fornecidos.")
+            dados_reais = None
         
     except Exception as e:
         st.error(f"Erro ao ler arquivo: {e}")
+        dados_reais = None
 
 # --- CONFIGURAÇÃO DOS GRÁFICOS ---
 col1, col2, col3 = st.columns(3)
@@ -109,7 +117,7 @@ c3.metric("Potência Gerada (Manual)", f"{(potencia_media_manual * cp)/1000:.2f}
 c4.metric("Área de Varredura", f"{area_varredura:.1f} m²")
 
 # --- EXIBIÇÃO AUTOMÁTICA DOS VALORES DO ARQUIVO ABAIXO DOS RESULTADOS ---
-if dados_reais is not None:
+if dados_reais is not None and k_auto is not None and c_auto is not None:
     st.markdown("---")
     st.subheader("Parâmetros Identificados no Histórico Real")
     
