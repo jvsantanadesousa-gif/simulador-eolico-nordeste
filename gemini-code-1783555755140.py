@@ -44,7 +44,8 @@ if arquivo_carregado is not None:
         if arquivo_carregado.name.endswith('.xlsx'):
             df = pd.read_excel(arquivo_carregado)
         else:
-            df = pd.read_csv(arquivo_carregado, sep=None, engine='python', encoding='utf-8')
+            # Configurado decimal=',' para ler arquivos que usam vírgula como separador de casa decimal
+            df = pd.read_csv(arquivo_carregado, sep=None, engine='python', encoding='utf-8', decimal=',')
         
         # Limpeza essencial: Remove espaços invisíveis nas bordas dos nomes das colunas
         df.columns = df.columns.str.strip()
@@ -78,7 +79,9 @@ if arquivo_carregado is not None:
             else:
                 coluna_velocidade = coluna_selecionada
                 
-            dados_reais = df[coluna_velocidade].dropna().values
+            # Tratamento adicional: converte para string, substitui vírgulas residuais por pontos e remove espaços
+            dados_limpos = df[coluna_velocidade].astype(str).str.replace(',', '.').str.strip()
+            dados_reais = pd.to_numeric(dados_limpos, errors='coerce').dropna().values
             
             # Garante dados numéricos e limpa valores inconsistentes (<= 0) para o ajuste de Weibull
             dados_reais = np.array(dados_reais, dtype=float)
